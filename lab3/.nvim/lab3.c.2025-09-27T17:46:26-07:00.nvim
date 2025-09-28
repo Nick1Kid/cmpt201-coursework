@@ -1,0 +1,73 @@
+#define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+
+
+void add_history(char *line, char *history[], int *count, int *start) {
+  if (*count == 5) {
+
+    free(history[*start]);
+    history[*start] = line;
+    *start = (*start + 1) % 5;
+
+  } else {
+
+    history[(*start + *count) % 5] = line;
+    (*count)++;
+  } 
+
+}
+
+void print_history(char *history[], int count, int start) {
+
+  for (int i = 0; i < count; i++) {
+    int index = (start + i) % 5;
+    printf("%s", history[index]);
+  } 
+
+}
+
+int main() {
+
+  char *history[5] = {NULL};
+  int count = 0;
+  int start = 0;
+
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  while (1) {
+
+    printf("Enter input: ");
+    read = getline(&line, &len, stdin);
+
+    if (read == -1) {
+      break;
+    }
+
+    char *stored = strdup(line);
+
+    if (strcmp(stored, "print\n") == 0) {
+
+      add_history(stored, history, &count, &start);
+      print_history(history, count, start);
+
+    } else {
+
+      add_history(stored, history, &count, &start);
+    }
+  }
+
+  for (int i = 0; i < count; i++) {
+
+    int index = (start + i) % 5;
+    free(history[index]);
+  }
+
+  free(line);
+  return 0;
+
+}

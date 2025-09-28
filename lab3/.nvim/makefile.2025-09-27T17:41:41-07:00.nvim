@@ -1,0 +1,8 @@
+CC	=
+CFLAGS	=
+
+lab3:	lab3.o
+	$(CC) $(CFLAGS) -o lab3 lab3.o
+
+lab3.o:	lab3.c
+	$(CC) $(CFLAGS) -c lab3.c
