@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-
+//Function to add lines to input history
 void add_history(char *line, char *history[], int *count, int *start) {
   if (*count == 5) {
 
@@ -17,7 +17,7 @@ void add_history(char *line, char *history[], int *count, int *start) {
     (*count)++;
   }
 }
-
+//Function to print input from history
 void print_history(char *history[], int count, int start) {
 
   for (int i = 0; i < count; i++) {
