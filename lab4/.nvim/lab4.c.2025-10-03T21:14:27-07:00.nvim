@@ -1,0 +1,95 @@
+#define _DEFAULT_SOURCE
+#define _ISOC99_SOURCE
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define BUF_SIZE 128
+
+struct header {
+  uint64_t size;
+  struct header *next;
+};
+
+void handle_error(const char *msg) {
+  write(STDOUT_FILENO, msg, strlen(msg));
+  write(STDOUT_FILENO, "\n", 1);
+  _exit(1);
+}
+
+void print_out(char *format, void *data, size_t data_size) {
+  char buf[BUF_SIZE];
+
+  size_t len = snprintf(buf, BUF_SIZE, format,
+                        data_size == sizeof(uint64_t) ? *(uint64_t *)data
+                                                      : *(void **)data);
+
+  if (len < 0) {
+    handle_error("snprintf");
+  }
+  write(STDOUT_FILENO, buf, len);
+}
+
+int main() {
+  void *base = sbrk(256);
+
+  if (base == (void *)-1) {
+    return 1; // handling for error
+  }
+
+  // Block addresses
+  struct header *block1 = (struct header *)base;
+  struct header *block2 = (struct header *)((char *)base + 128);
+
+  // Initialize headers
+  block1->size = 128;
+  block1->next = NULL;
+
+  block2->size = 128;
+  block2->next = block1;
+
+  // Data region locate
+  char *data1 = (char *)(block1 + 1);
+  char *data2 = (char *)(block2 + 1);
+  int data_size = 128 - sizeof(struct header);
+
+  // Initializing data for each block
+  memset(data1, 0, data_size);
+  memset(data2, 1, data_size);
+
+  write(STDOUT_FILENO, "first block: ", 13);
+  print_out("%p\n", &block1, sizeof(void *));
+
+  write(STDOUT_FILENO, "second block: ", 14);
+  print_out("%p\n", &block2, sizeof(void *));
+
+  write(STDOUT_FILENO, "first block size: ", 14);
+  print_out("%p\n", &block1->size, sizeof(void *));
+
+  write(STDOUT_FILENO, "first block next: ", 18);
+  print_out("%p\n", &block1->next, sizeof(void *));
+
+  write(STDOUT_FILENO, "second block size: ", 19);
+  print_out("%p\n", &block2->size, sizeof(void *));
+
+  write(STDOUT_FILENO, "second block next: ", 19);
+  print_out("%p\n", &block2->next, sizeof(void *));
+
+  for (int i = 0; i < data_size; i++) {
+    char buf[32];
+    ssize_t len = snprintf(buf, sizeof(buf), "%d\n", (unsigned char)data1[i]);
+    write(STDOUT_FILENO, buf, len);
+  }
+
+  for (int i = 0; i < data_size; i++) {
+    char buf[32];
+    ssize_t len = snprintf(buf, sizeof(buf), "%d\n", (unsigned char)data2[i]);
+    write(STDOUT_FILENO, buf, len);
+  }
+
+  return 0;
+}

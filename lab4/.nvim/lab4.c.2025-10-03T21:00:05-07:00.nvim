@@ -1,0 +1,90 @@
+#define _DEFAULT_SOURCE
+#define _ISOC99_SOURCE
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define BUF_SIZE 128
+
+struct header {
+  uint64_t size;
+  struct header *next;
+};
+
+void handle_error(const char *msg) {
+  write(STDOUT_FILENO, msg, strlen(msg));
+  write(STDOUT_FILENO, "\n", 1);
+  _exit(1);
+}
+
+void printout(char *format, void *data, size_t data_size) {
+  char buf[BUF_SIZE];
+
+  ssize_t len = snprintf(buf, BUF_SIZE, format,
+                         data_size == sizeof(uint64_t) ? *(uint64_t *)data
+                                                       : *(void **)data);
+
+  if (len < 0) {
+    handle_error("snprintf");
+  }
+
+  write(STDOUT_FILENO, buf, len);
+}
+
+int main() {
+  void *heap = sbrk(256);
+  if (heap == (void *)-1) {
+    handle_error("sbrk failed"); // Error handling for sbrk()
+  }
+
+  // Creating block addresses
+  struct header *b1 = (struct header *)heap;
+  struct header *b2 = (struct header *)((char *)heap + 128);
+
+  // Initializing headers (size, next)
+  b1->size = 128;
+  b1->next = NULL;
+  b2->size = 128;
+  b2->next = b1;
+
+  // data region locate
+  char *data1 = (char *)(b1 + 1);
+  char *data2 = (char *)(b2 + 1);
+  int data_size = 128 - sizeof(struct header);
+
+  // Fill data within memory
+  memset(data1, 0, data_size);
+  memset(data2, 1, data_size);
+
+  write(STDOUT_FILENO, "first block: ", 13);
+  printout("%p\n", &b1, sizeof(void *));
+
+  write(STDOUT_FILENO, "second block: ", 14);
+  printout("%p\n", &b2, sizeof(void *));
+
+  write(STDOUT_FILENO, "first block size: ", 18);
+  printout("%p\n", &b1->size, sizeof(void *));
+
+  write(STDOUT_FILENO, "first block next: ", 18);
+  printout("%p\n", &b1->next, sizeof(void *));
+
+  write(STDOUT_FILENO, "second block size: ", 19);
+  printout("%p\n", &b2->size, sizeof(void *));
+
+  write(STDOUT_FILENO, "second block next: ", 19);
+  printout("%p\n", &b2->next, sizeof(void *));
+
+  for (int i = 0; i < data_size; i++) {
+    printout("%d\n", &data1[i], sizeof(uint64_t));
+  }
+
+  for (int i = 0; i < data_size; i++) {
+    printout("%d\n", &data2[i], sizeof(uint64_t));
+  }
+
+  return 0;
+}
